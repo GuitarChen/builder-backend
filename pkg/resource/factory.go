@@ -15,14 +15,25 @@
 package resource
 
 import (
-	"github.com/illa-family/builder-backend/pkg/plugins/common"
-	"github.com/illa-family/builder-backend/pkg/plugins/elasticsearch"
-	"github.com/illa-family/builder-backend/pkg/plugins/mongodb"
-	"github.com/illa-family/builder-backend/pkg/plugins/mysql"
-	"github.com/illa-family/builder-backend/pkg/plugins/postgresql"
-	"github.com/illa-family/builder-backend/pkg/plugins/redis"
-	"github.com/illa-family/builder-backend/pkg/plugins/restapi"
-	"github.com/illa-family/builder-backend/pkg/plugins/s3"
+	"github.com/illacloud/builder-backend/pkg/plugins/clickhouse"
+	"github.com/illacloud/builder-backend/pkg/plugins/common"
+	"github.com/illacloud/builder-backend/pkg/plugins/couchdb"
+	"github.com/illacloud/builder-backend/pkg/plugins/dynamodb"
+	"github.com/illacloud/builder-backend/pkg/plugins/elasticsearch"
+	"github.com/illacloud/builder-backend/pkg/plugins/firebase"
+	"github.com/illacloud/builder-backend/pkg/plugins/graphql"
+	"github.com/illacloud/builder-backend/pkg/plugins/hfendpoint"
+	"github.com/illacloud/builder-backend/pkg/plugins/huggingface"
+	"github.com/illacloud/builder-backend/pkg/plugins/mongodb"
+	"github.com/illacloud/builder-backend/pkg/plugins/mssql"
+	"github.com/illacloud/builder-backend/pkg/plugins/mysql"
+	"github.com/illacloud/builder-backend/pkg/plugins/oracle"
+	"github.com/illacloud/builder-backend/pkg/plugins/postgresql"
+	"github.com/illacloud/builder-backend/pkg/plugins/redis"
+	"github.com/illacloud/builder-backend/pkg/plugins/restapi"
+	"github.com/illacloud/builder-backend/pkg/plugins/s3"
+	"github.com/illacloud/builder-backend/pkg/plugins/smtp"
+	"github.com/illacloud/builder-backend/pkg/plugins/snowflake"
 )
 
 var (
@@ -35,6 +46,18 @@ var (
 	MONGODB_RESOURCE       = "mongodb"
 	ELASTICSEARCH_RESOURCE = "elasticsearch"
 	S3_RESOURCE            = "s3"
+	SMTP_RESOURCE          = "smtp"
+	SUPABASEDB_RESOURCE    = "supabasedb"
+	FIREBASE_RESOURCE      = "firebase"
+	CLICKHOUSE_RESOURCE    = "clickhouse"
+	GRAPHQL_RESOURCE       = "graphql"
+	MSSQL_RESOURCE         = "mssql"
+	HUGGINGFACE_RESOURCE   = "huggingface"
+	DYNAMODB_RESOURCE      = "dynamodb"
+	SNOWFLAKE_RESOURCE     = "snowflake"
+	COUCHDB_RESOURCE       = "couchdb"
+	HFENDPOINT_RESOURCE    = "hfendpoint"
+	ORACLE_RESOURCE        = "oracle"
 )
 
 type AbstractResourceFactory interface {
@@ -53,7 +76,7 @@ func (f *Factory) Generate() common.DataConnector {
 	case MYSQL_RESOURCE, MARIADB_RESOURCE, TIDB_RESOURCE:
 		sqlRsc := &mysql.MySQLConnector{}
 		return sqlRsc
-	case POSTGRES_RESOURCE:
+	case POSTGRES_RESOURCE, SUPABASEDB_RESOURCE:
 		pgsRsc := &postgresql.Connector{}
 		return pgsRsc
 	case REDIS_RESOURCE:
@@ -68,6 +91,39 @@ func (f *Factory) Generate() common.DataConnector {
 	case S3_RESOURCE:
 		s3Rsc := &s3.Connector{}
 		return s3Rsc
+	case SMTP_RESOURCE:
+		smtpRsc := &smtp.Connector{}
+		return smtpRsc
+	case FIREBASE_RESOURCE:
+		firebaseRsc := &firebase.Connector{}
+		return firebaseRsc
+	case CLICKHOUSE_RESOURCE:
+		clickhouseRsc := &clickhouse.Connector{}
+		return clickhouseRsc
+	case GRAPHQL_RESOURCE:
+		graphqlRsc := &graphql.Connector{}
+		return graphqlRsc
+	case MSSQL_RESOURCE:
+		mssqlRsc := &mssql.Connector{}
+		return mssqlRsc
+	case HUGGINGFACE_RESOURCE:
+		hfRsc := &huggingface.Connector{}
+		return hfRsc
+	case DYNAMODB_RESOURCE:
+		dynamodbRsc := &dynamodb.Connector{}
+		return dynamodbRsc
+	case SNOWFLAKE_RESOURCE:
+		snowflakeRsc := &snowflake.Connector{}
+		return snowflakeRsc
+	case COUCHDB_RESOURCE:
+		couchdbRsc := &couchdb.Connector{}
+		return couchdbRsc
+	case HFENDPOINT_RESOURCE:
+		hfendpointRsc := &hfendpoint.Connector{}
+		return hfendpointRsc
+	case ORACLE_RESOURCE:
+		oracleRsc := &oracle.Connector{}
+		return oracleRsc
 	default:
 		return nil
 	}

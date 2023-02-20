@@ -18,11 +18,14 @@ import (
 	"errors"
 	"time"
 
-	"github.com/illa-family/builder-backend/internal/repository"
+	"github.com/illacloud/builder-backend/internal/repository"
+
 	"go.uber.org/zap"
 )
 
-var type_array = [11]string{"transformer", "restapi", "graphql", "redis", "mysql", "mariadb", "postgresql", "mongodb", "tidb", "elasticsearch", "s3"}
+var type_array = [22]string{"transformer", "restapi", "graphql", "redis", "mysql", "mariadb", "postgresql", "mongodb",
+	"tidb", "elasticsearch", "s3", "smtp", "supabasedb", "firebase", "clickhouse", "mssql", "huggingface", "dynamodb",
+	"snowflake", "couchdb", "hfendpoint", "oracle"}
 var type_map = map[string]int{
 	"transformer":   0,
 	"restapi":       1,
@@ -35,6 +38,17 @@ var type_map = map[string]int{
 	"tidb":          8,
 	"elasticsearch": 9,
 	"s3":            10,
+	"smtp":          11,
+	"supabasedb":    12,
+	"firebase":      13,
+	"clickhouse":    14,
+	"mssql":         15,
+	"huggingface":   16,
+	"dynamodb":      17,
+	"snowflake":     18,
+	"couchdb":       19,
+	"hfendpoint":    20,
+	"oracle":        21,
 }
 
 type ActionService interface {
@@ -53,7 +67,7 @@ type ActionDto struct {
 	Version     int                    `json:"-"`
 	Resource    int                    `json:"resourceId,omitempty"`
 	DisplayName string                 `json:"displayName" validate:"required"`
-	Type        string                 `json:"actionType" validate:"oneof=transformer restapi graphql redis mysql mariadb postgresql mongodb tidb elasticsearch s3"`
+	Type        string                 `json:"actionType" validate:"oneof=transformer restapi graphql redis mysql mariadb postgresql mongodb tidb elasticsearch s3 smtp supabasedb firebase clickhouse mssql huggingface dynamodb snowflake couchdb hfendpoint oracle"`
 	Template    map[string]interface{} `json:"content" validate:"required"`
 	Transformer map[string]interface{} `json:"transformer" validate:"required"`
 	TriggerMode string                 `json:"triggerMode" validate:"oneof=manually automate"`

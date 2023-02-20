@@ -18,9 +18,10 @@ package resthandler
 import (
 	"encoding/json"
 	"net/http"
+	"os"
 	"time"
 
-	"github.com/illa-family/builder-backend/pkg/user"
+	"github.com/illacloud/builder-backend/pkg/user"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -50,10 +51,10 @@ type SignUpRequest struct {
 	Nickname          string `json:"nickname" validate:"required"`
 	Email             string `json:"email" validate:"required"`
 	Password          string `json:"password" validate:"required"`
-	Language          string `json:"language" validate:"oneof=zh-CN en-US"`
+	Language          string `json:"language" validate:"oneof=zh-CN en-US ko-KR ja-JP"`
 	IsSubscribed      bool   `json:"isSubscribed"`
-	VerificationCode  string `json:"verificationCode" validate:"required"`
-	VerificationToken string `json:"verificationToken" validate:"required"`
+	VerificationCode  string `json:"verificationCode"`
+	VerificationToken string `json:"verificationToken"`
 }
 
 type SignInRequest struct {
@@ -156,14 +157,16 @@ func (impl UserRestHandlerImpl) SignUp(c *gin.Context) {
 	}
 
 	// validate verification code
-	validCode, err := impl.userService.ValidateVerificationCode(payload.VerificationCode, payload.VerificationToken,
-		payload.Email, "signup")
-	if err != nil || !validCode {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"errorCode":    400,
-			"errorMessage": "validate verification code error: " + err.Error(),
-		})
-		return
+	if os.Getenv("ILLA_DEPLOY_MODE") == "cloud" {
+		validCode, err := impl.userService.ValidateVerificationCode(payload.VerificationCode, payload.VerificationToken,
+			payload.Email, "signup")
+		if err != nil || !validCode {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"errorCode":    400,
+				"errorMessage": "validate verification code error: " + err.Error(),
+			})
+			return
+		}
 	}
 
 	// create user

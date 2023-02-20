@@ -20,12 +20,13 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
-	"github.com/illa-family/builder-backend/pkg/plugins/common"
+	"github.com/illacloud/builder-backend/pkg/plugins/common"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/go-playground/validator/v10"
 	"github.com/mitchellh/mapstructure"
 )
@@ -53,12 +54,15 @@ func (c *CommandExecutor) listObjects() (common.RuntimeResult, error) {
 	if listCommandArgs.BucketName == "" {
 		listCommandArgs.BucketName = c.bucket
 	}
+	if listCommandArgs.MaxKeys == 0 {
+		listCommandArgs.MaxKeys = 100
+	}
 
 	// build listObjectInput
 	params := s3.ListObjectsV2Input{
 		Bucket:    &listCommandArgs.BucketName,
 		Delimiter: &listCommandArgs.Delimiter,
-		Prefix:    &listCommandArgs.Pre,
+		Prefix:    &listCommandArgs.Prefix,
 		MaxKeys:   listCommandArgs.MaxKeys,
 	}
 
@@ -234,27 +238,29 @@ func (c *CommandExecutor) deleteMultipleObjects() (common.RuntimeResult, error) 
 		batchDeleteCommandArgs.BucketName = c.bucket
 	}
 
-	// build DeleteObjectsInput
-	var deleteObjects types.Delete
-	objects := make([]types.ObjectIdentifier, 0, len(batchDeleteCommandArgs.ObjectKeyList))
-	for _, key := range batchDeleteCommandArgs.ObjectKeyList {
-		objIdent := types.ObjectIdentifier{Key: &key}
-		objects = append(objects, objIdent)
-	}
-	deleteObjects.Objects = objects
-	params := s3.DeleteObjectsInput{
-		Bucket: &batchDeleteCommandArgs.BucketName,
-		Delete: &deleteObjects,
-	}
+	// run PutObject for BatchUpload
+	batchN := len(batchDeleteCommandArgs.ObjectKeyList)
+	failedKeys := make([]string, 0, batchN)
+	successN := 0
+	for i := 0; i < batchN; i++ {
+		// build DeleteObjectInput
+		params := s3.DeleteObjectInput{
+			Bucket: &batchDeleteCommandArgs.BucketName,
+			Key:    &batchDeleteCommandArgs.ObjectKeyList[i],
+		}
 
-	res, err := c.client.DeleteObjects(context.TODO(), &params)
-	if err != nil {
-		return common.RuntimeResult{Success: false}, err
+		_, err := c.client.DeleteObject(context.TODO(), &params)
+		if err != nil {
+			failedKeys = append(failedKeys, batchDeleteCommandArgs.ObjectKeyList[i])
+			continue
+		}
+
+		successN += 1
 	}
 
 	return common.RuntimeResult{
 		Success: true,
-		Rows:    []map[string]interface{}{{"deleted": res.Deleted, "errors": res.Errors}},
+		Rows:    []map[string]interface{}{{"count": batchN, "success": successN, "failure": failedKeys}},
 		Extra:   nil,
 	}, nil
 }
@@ -282,14 +288,18 @@ func (c *CommandExecutor) uploadAnObject() (common.RuntimeResult, error) {
 	if err != nil {
 		return common.RuntimeResult{Success: false}, err
 	}
-	contentLength := len(objectDataBytes)
+	decodedObjectDataString, err := url.QueryUnescape(string(objectDataBytes))
+	if err != nil {
+		return common.RuntimeResult{Success: false}, err
+	}
+	contentLength := len(decodedObjectDataString)
 	if objectSizeLimiter(int64(contentLength)) {
 		return common.RuntimeResult{Success: false}, errors.New("oversize object")
 	}
 	params := s3.PutObjectInput{
 		Bucket:        &uploadCommandArgs.BucketName,
 		Key:           &uploadCommandArgs.ObjectKey,
-		Body:          bytes.NewReader(objectDataBytes),
+		Body:          strings.NewReader(decodedObjectDataString),
 		ContentLength: int64(contentLength),
 	}
 	if uploadCommandArgs.ContentType != "" {
@@ -341,7 +351,12 @@ func (c *CommandExecutor) uploadMultipleObjects() (common.RuntimeResult, error) 
 			failedKeys = append(failedKeys, batchUploadCommandArgs.ObjectKeyList[i])
 			continue
 		}
-		contentLength := len(objectDataBytes)
+		decodedObjectDataString, err := url.QueryUnescape(string(objectDataBytes))
+		if err != nil {
+			failedKeys = append(failedKeys, batchUploadCommandArgs.ObjectKeyList[i])
+			continue
+		}
+		contentLength := len(decodedObjectDataString)
 		if objectSizeLimiter(int64(contentLength)) {
 			failedKeys = append(failedKeys, batchUploadCommandArgs.ObjectKeyList[i])
 			continue
@@ -349,7 +364,7 @@ func (c *CommandExecutor) uploadMultipleObjects() (common.RuntimeResult, error) 
 		params := s3.PutObjectInput{
 			Bucket:        &batchUploadCommandArgs.BucketName,
 			Key:           &batchUploadCommandArgs.ObjectKeyList[i],
-			Body:          bytes.NewReader(objectDataBytes),
+			Body:          strings.NewReader(decodedObjectDataString),
 			ContentLength: int64(contentLength),
 		}
 		if batchUploadCommandArgs.ContentType != "" {
